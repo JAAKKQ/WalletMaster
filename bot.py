@@ -21,6 +21,9 @@ from discord.ext.commands import Bot, Context
 
 import exceptions
 
+import asyncio
+import aiohttp
+
 if not os.path.isfile(f"{os.path.realpath(os.path.dirname(__file__))}/config.json"):
     sys.exit("'config.json' not found! Please add it and try again.")
 else:
@@ -160,20 +163,38 @@ async def on_ready() -> None:
     bot.logger.info(f"Python version: {platform.python_version()}")
     bot.logger.info(f"Running on: {platform.system()} {platform.release()} ({os.name})")
     bot.logger.info("-------------------")
-    status_task.start()
+    update_activity.start()
+    asyncio.create_task(update_prices())
     if config["sync_commands_globally"]:
         bot.logger.info("Syncing commands globally...")
         await bot.tree.sync()
 
 
-@tasks.loop(minutes=1.0)
-async def status_task() -> None:
-    """
-    Setup the game status task of the bot.
-    """
-    statuses = ["with you!", "with Krypton!", "with humans!"]
-    await bot.change_presence(activity=discord.Game(random.choice(statuses)))
+coins = ['bitcoin', 'ethereum', 'dogecoin', 'stellar']
+symbols = ['BTC', 'ETH', 'DOGE', 'XLM']
+current_coin_index = 0
+prices = {coin: 0.0 for coin in coins}
 
+async def update_prices():
+    async with aiohttp.ClientSession() as session:
+        try:
+            for coin in coins:
+                async with session.get(f'https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd') as response:
+                    data = await response.json()
+                    prices[coin] = data[coin]['usd']
+        except Exception as e:
+            bot.logger.info(
+            f"Error retreiving activity prices: {e}")
+        await asyncio.sleep(60)
+
+@tasks.loop(seconds=5)
+async def update_activity():
+    global current_coin_index
+    symbol = symbols[current_coin_index]
+    price = prices[coins[current_coin_index]]
+    activity = discord.Activity(type=discord.ActivityType.watching, name=f'{symbol} ${price:.2f}')
+    await bot.change_presence(activity=activity)
+    current_coin_index = (current_coin_index + 1) % len(coins)
 
 @bot.event
 async def on_message(message: discord.Message) -> None:
