@@ -1,0 +1,13 @@
+{
+    "prefix": "YOUR_BOT_PREFIX_HERE",
+    "token": "YOUR_BOT_TOKEN_HERE",
+    "permissions": "277025410048",
+    "application_id": "YOUR_APPLICATION_ID_HERE",
+    "sync_commands_globally": true,
+    "owners": [
+      123456789,
+      987654321,
+      275223062243180544
+    ],
+    "finhub_key": "Your-key-here"
+  }
